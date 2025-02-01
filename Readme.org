@@ -1,0 +1,102 @@
+* Beroot
+
+Beroot is just another privilege escalation tool. I made Beroot for two reasons:
+- I wanted to learn (I discovered a lot of new functions in the standard
+  library)
+- Sudo is bloated, and wanted to do something smaller - but usable - than doas.
+
+** Usage
+
+Beroot is just two files: ~main.c~ the source of beroot, ~config,h~ the
+configurations of the tool. Beroot doesn't have any ~.conf~ files that need to be
+parsed or something similar, all the changes are made to the ~config.h~ file.
+
+First, you'll need to build the program:
+
+#+begin_src bash
+  make
+#+end_src
+
+Now, you'll need to login as root to execute the following commands:
+
+#+begin_src bash
+  make install
+#+end_src
+
+That command will copy ~./bin/beroot~ to ~/usr/bin~ and set the appropriate permissions to it.
+
+** Configuration
+
+The only thing you need to modify is the ~permissions~ variable in ~config.h~. This
+file contains the following structure:
+
+#+begin_src C
+  struct user_permissions
+  {
+    const char name[16384];
+    const char target_user[16384];
+    unsigned char permissions;
+  };
+#+end_src
+
+It only has three fields:
+- ~name~: The name of the user you expect can use beroot (like the ones that
+  belong to the ~wheel~ group)
+- ~target_user~: In case you want a user not to be root, but rather a different
+  user that exists on the machine, you can specify their name using this
+  variable.
+- ~permissions~: Here you can set some of the following permission bits:
+  - ~PERM_ROOT~: If this is set, the user will execute commands as root,
+    ~target_user~ will be ignored in this case.
+  - ~PERM_USER~: If this bit is present, the user will execute commands as
+    ~target_user~ instead of root. If both ~PERM_ROOT~ and ~PERM_USER~ are present,
+    the last one is ignored as ~PERM_ROOT~ is checked first in the code.
+  - ~PERM_PASSWD~: If this is set, beroot will ask for the target user password
+    every time that the command is ran.
+  - ~PERM_NOPASSWD~: If this bit is present, beroot won't ask for the target user
+    password, it will just execute the specified command. Notice that either
+    ~PERM_PASSWD~ or ~PERM_NOPASSWD~ must be present, if none of them are, beroot
+    will display an error.
+
+For example, if we have a user called ~lain~ and we want this user to execute
+commands as root, and not ask for a password, we'd add the following to the
+~permissions~ variable in ~config.h~:
+
+#+begin_src C
+  const static struct user_permissions permissions[] = {
+    { .name = "lain",
+      .target_user = "\0",
+      .permissions = PERM_ROOT | PERM_NOPASSWD }
+  };
+#+end_src
+
+In that case, we are setting the user ~lain~ with the permissions of ~PERM_ROOT~
+(execute commands as root) and ~PERM_NOPASSWD~ (don't ask for a password).
+
+If we want to have multiple rules, we can just separate them by a comma (,):
+
+#+begin_src C
+  const static struct user_permissions permissions[]
+      = { { .name = "lain",
+            .target_user = "\0",
+            .permissions = PERM_ROOT | PERM_NOPASSWD },
+          { .name = "alyssa",
+            .target_user = "dbuser",
+            .permissions = PERM_USER | PERM_PASSWD } };
+#+end_src
+
+In that code now we have two users: ~lain~ with the settings we mentioned before,
+and a new user ~alyssa~ that will execute commands as ~dbuser~ and ~PERM_PASSWD~ will
+make that she has to enter her password every time she runs ~beroot~.
+
+** TODO
+
+I don't want to make this a big program, I want to keep everything as simple as
+possible, but there are some things that I want to do:
+- Optimise the code, I wrote this in like 1 hour just to test things in the
+  standard library.
+- Some kind of persistency (there can be a ~PERM_PERSIST~ flag) so the password
+  doesn't need to be entered every time.
+- Hide the password while it's being typed.
+
+Those are the only things I have planned adding to beroot.
