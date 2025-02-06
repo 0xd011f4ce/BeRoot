@@ -7,6 +7,8 @@
 #include <shadow.h>
 #include <unistd.h>
 
+#include <termios.h>
+
 #include "config.h"
 
 void
@@ -104,6 +106,30 @@ execute (char **command)
 	commands = NULL;
 }
 
+void
+get_password (char *password)
+{
+	if (!password)
+		return;
+
+	static struct termios old_t = { 0 }, new_t = { 0 };
+	tcgetattr (STDIN_FILENO, &old_t);
+	new_t = old_t;
+	new_t.c_lflag &= ~(ECHO);
+	tcsetattr (STDIN_FILENO, TCSANOW, &new_t);
+
+	int i = 0;
+	char c = '\0';
+	while ((c = getchar ()) != '\n' && c != EOF && i < LOGIN_PASSWD_MAX)
+		{
+			password[i++] = c;
+		}
+	password[i] = '\0';
+
+	tcsetattr (STDIN_FILENO, TCSANOW, &old_t);
+	puts (""); // the \n character is not printed anymore
+}
+
 int
 main (int argc, char *argv[])
 {
@@ -150,10 +176,12 @@ main (int argc, char *argv[])
 	else if (user->permissions & PERM_PASSWD)
 		{
 			printf ("Enter the %s password: ", user->target_user);
-			char entered_password[LOGIN_PASSWD_MAX] = { 0 };
-			fgets (entered_password, LOGIN_PASSWD_MAX - 1, stdin);
+			char *entered_password = calloc (sizeof (char), LOGIN_PASSWD_MAX);
+			get_password (entered_password);
 			is_authenticated
 					= authenticate_user (target_swpd->sp_pwdp, entered_password);
+
+			free (entered_password);
 		}
 	else
 		{

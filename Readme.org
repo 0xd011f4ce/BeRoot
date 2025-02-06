@@ -89,7 +89,7 @@ In that code now we have two users: ~lain~ with the settings we mentioned before
 and a new user ~alyssa~ that will execute commands as ~dbuser~ and ~PERM_PASSWD~ will
 make that she has to enter her password every time she runs ~beroot~.
 
-** TODO
+** TO-DO List
 
 I don't want to make this a big program, I want to keep everything as simple as
 possible, but there are some things that I want to do:
@@ -97,6 +97,5 @@ possible, but there are some things that I want to do:
   standard library.
 - Some kind of persistency (there can be a ~PERM_PERSIST~ flag) so the password
   doesn't need to be entered every time.
-- Hide the password while it's being typed.
 
 Those are the only things I have planned adding to beroot.
